@@ -201,9 +201,16 @@ end)
 -- A wallpaper-derived palette resolves asynchronously; redraw once it lands.
 ring.setOnPaletteChanged(render)
 
+-- No theme-changed event exists: poll the cheap palette check every second, and fully render every fifth tick.
+local ticks = 0
 function update()
-  noctalia.setUpdateInterval(5000)
-  render()
+  noctalia.setUpdateInterval(1000)
+  lastOutput = barWidget.outputName() or lastOutput
+  ticks += 1
+  local ringStyle = (noctalia.getConfig("pill_style") or "glyph_text") ~= "glyph_text"
+  if ticks % 5 == 1 or (ringStyle and ring.paletteStale(lastOutput)) then
+    render()
+  end
 end
 
 -- Left click: open / close the attached usage panel.
