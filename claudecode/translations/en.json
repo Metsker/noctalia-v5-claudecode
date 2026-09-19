@@ -86,9 +86,6 @@
       "label": "Ring fallback color",
       "description": "Used only when the palette cannot be read, as with built-in themes on Noctalia versions without getColor."
     },
-    "ring_track_color": {
-      "label": "Ring track fallback color"
-    },
     "show_glyph": {
       "label": "Show glyph",
       "description": "Only applies to the glyph + percentage style."

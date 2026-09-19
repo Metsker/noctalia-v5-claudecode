@@ -14,7 +14,7 @@
 --   theme.source = "community" <state>/community-palettes/<name>.json
 --   theme.source = "wallpaper" reproduced with `noctalia theme <image> --dark`
 --   theme.source = "builtin"   compiled into the shell binary — not readable;
---                              the ring_color / ring_track_color settings win
+--                              the ring_color setting wins
 --
 -- Anything that fails falls back the same way, so the ring always draws.
 
@@ -40,7 +40,6 @@ local HARD_FALLBACK = {
   error = "#E06C75",
 }
 local FALLBACK_FILL = "#89B4FA"
-local FALLBACK_TRACK = "#585B70"
 
 -- ── palette resolution ──────────────────────────────────────────────────────
 
@@ -196,7 +195,7 @@ end
 
 -- Palette role -> hex. `fallback` is the configured color for this slot; a role
 -- name there is resolved too, so "outline" in a color setting keeps working.
-function M.color(role, fallback, isTrack)
+function M.color(role, fallback)
   local hex = lookup(role)
   if hex then return hex end
   if type(fallback) == "string" and fallback ~= "" then
@@ -205,7 +204,7 @@ function M.color(role, fallback, isTrack)
     if hex then return hex end
   end
   if HARD_FALLBACK[role] then return HARD_FALLBACK[role] end
-  return isTrack and FALLBACK_TRACK or FALLBACK_FILL
+  return FALLBACK_FILL
 end
 
 -- ── svg ─────────────────────────────────────────────────────────────────────
@@ -215,10 +214,11 @@ local function num(v)
 end
 
 -- One ring: full-circle track plus an arc sweeping clockwise from 12 o'clock.
-local function ringMarkup(cx, cy, r, lw, frac, track, fill)
+local function ringMarkup(cx, cy, r, lw, frac, fill)
   if r < lw then return "" end -- too small to read as a ring; skip it
   local parts = {
-    `<circle cx="{num(cx)}" cy="{num(cy)}" r="{num(r)}" fill="none" stroke="{track}" stroke-width="{num(lw)}"/>`,
+    -- The track is the arc's own color at 30%, the way the shell's bar gauges draw theirs.
+    `<circle cx="{num(cx)}" cy="{num(cy)}" r="{num(r)}" fill="none" stroke="{fill}" stroke-opacity="0.3" stroke-width="{num(lw)}"/>`,
   }
   if frac >= 0.999 then
     table.insert(parts, `<circle cx="{num(cx)}" cy="{num(cy)}" r="{num(r)}" fill="none" stroke="{fill}" stroke-width="{num(lw)}"/>`)
@@ -233,7 +233,7 @@ local function ringMarkup(cx, cy, r, lw, frac, track, fill)
 end
 
 -- Rings nest inward from the edge; with more than one, each gets a thinner stroke and a gap so all fit.
-local function buildSvg(size, lw, rings, track)
+local function buildSvg(size, lw, rings)
   local cx = size / 2
   local lane, gap = lw, 0
   if #rings > 1 then
@@ -243,7 +243,7 @@ local function buildSvg(size, lw, rings, track)
   local parts = { `<svg xmlns="http://www.w3.org/2000/svg" width="{size}" height="{size}" viewBox="0 0 {size} {size}">` }
   for i, ring in rings do
     local r = (size - lane) / 2 - (i - 1) * (lane + gap)
-    table.insert(parts, ringMarkup(cx, cx, r, lane, ring.frac, track, ring.fill))
+    table.insert(parts, ringMarkup(cx, cx, r, lane, ring.frac, ring.fill))
   end
   table.insert(parts, "</svg>")
   return table.concat(parts, "")
@@ -265,12 +265,11 @@ function M.path(rings, opts)
 
   refreshPalette(opts.connector)
 
-  local track = M.color("surface_variant", opts.trackColor, true)
   local resolved, keyParts = {}, {}
   for _, spec in rings do
     local frac = tonumber(spec.frac) or 0
     if frac < 0 then frac = 0 elseif frac > 1 then frac = 1 end
-    local fill = M.color(spec.role, opts.fillColor, false)
+    local fill = M.color(spec.role, opts.fillColor)
     table.insert(resolved, { frac = frac, fill = fill })
     table.insert(keyParts, `{num(frac)}/{fill}`)
   end
@@ -279,12 +278,12 @@ function M.path(rings, opts)
   if dir == nil then return nil end
   local path = `{dir}/pill-ring.svg`
 
-  local key = `{paletteSig or "-"}|{size}|{num(lw)}|{table.concat(keyParts, ",")}|{track}`
+  local key = `{paletteSig or "-"}|{size}|{num(lw)}|{table.concat(keyParts, ",")}`
   if key == lastKey and lastPath == path and noctalia.fileExists(path) then
     return path
   end
 
-  local ok = noctalia.writeFile(path, buildSvg(size, lw, resolved, track))
+  local ok = noctalia.writeFile(path, buildSvg(size, lw, resolved))
   if not ok then return nil end
   lastKey, lastPath = key, path
   return path

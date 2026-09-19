@@ -40,7 +40,6 @@ local function config()
     size = tonumber(noctalia.getConfig("ring_size")) or 16,
     thickness = tonumber(noctalia.getConfig("ring_thickness")) or 3,
     fillColor = noctalia.getConfig("ring_color"),
-    trackColor = noctalia.getConfig("ring_track_color"),
   }
 end
 
@@ -131,7 +130,6 @@ local function render()
       size = cfg.size,
       thickness = cfg.thickness,
       fillColor = cfg.fillColor,
-      trackColor = cfg.trackColor,
       connector = lastOutput,
     })
   end

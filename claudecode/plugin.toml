@@ -161,12 +161,6 @@ entry = "widget.luau"
   description_key = "settings.ring_color.description"
   default = "#89B4FA"
 
-  [[widget.setting]]
-  key = "ring_track_color"
-  type = "color"
-  label_key = "settings.ring_track_color.label"
-  default = "#585B70"
-
 # Click panel: the DMS popout — rate windows, token columns, daily activity with
 # hover detail, per-model breakdown, all-time stats, profile selector. Attached to
 # the bar pill that opened it. (Id "popout": entry ids are unique across entry
