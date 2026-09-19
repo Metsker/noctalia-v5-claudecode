@@ -142,7 +142,9 @@ count_profile_tokens() {
         day_dates="${day_dates:+${day_dates},}${d}"
     done
 
+    # grep drops non-assistant lines before jq parses them, which is most of the runtime.
     find "$proj_dir" -name "*.jsonl" -mtime -31 -exec cat {} + 2>/dev/null \
+        | grep -E '"type": *"assistant"' \
         | jq -r -R 'fromjson? | select(.type == "assistant") | "\(.timestamp[:10]) \(.message.model // "unknown") \(.message.usage.input_tokens // 0) \(.message.usage.output_tokens // 0) \(.message.usage.cache_read_input_tokens // 0) \(.message.usage.cache_creation_input_tokens // 0) \(.sessionId // "unknown")"' \
         | awk -v week_start="$WEEK_START" -v month_start="$MONTH_START" -v today="$TODAY" -v day_dates="$day_dates" -v pricing="$PRICING_AWK" '
         BEGIN {
