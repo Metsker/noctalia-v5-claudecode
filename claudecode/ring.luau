@@ -99,7 +99,8 @@ local function rolesFrom(doc, dark)
   if type(variant) ~= "table" then variant = doc end
   local out, found = {}, false
   for role, key in ROLE_KEYS do
-    local hex = variant[key]
+    -- Palette files spell roles mPrimary; `noctalia theme` prints the bare token name.
+    local hex = variant[key] or variant[role]
     if type(hex) == "string" and hex:sub(1, 1) == "#" then
       out[role] = hex
       found = true
