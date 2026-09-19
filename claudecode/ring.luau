@@ -143,8 +143,8 @@ local function resolveWallpaper(sig, dark, connector)
   end, 8000)
 end
 
--- The effective theme as one comparable string; a wallpaper theme includes the image, which changes without any setting.
-local function signature(connector)
+-- Re-resolve when the effective theme changed. Cheap and idempotent.
+local function refreshPalette(connector)
   local source = noctalia.getSetting("theme.source")
   if type(source) ~= "string" then source = "" end
   local dark = noctalia.isDarkMode()
@@ -158,22 +158,13 @@ local function signature(connector)
     name = noctalia.getSetting("theme.builtin") or ""
   elseif source == "wallpaper" then
     name = tostring(noctalia.getSetting("theme.wallpaper_scheme") or "")
-    if connector then name = `{name}@{connector}:{noctalia.wallpaperPath(connector) or ""}` end
+    if connector then name = `{name}@{connector}` end
   end
 
-  return `{source}/{name}/{dark and "dark" or "light"}`, source, name, dark
-end
-
--- Re-resolve when the effective theme changed. Cheap and idempotent.
-local function refreshPalette(connector)
-  local sig, source, name, dark = signature(connector)
+  local sig = `{source}/{name}/{dark and "dark" or "light"}`
   if sig == paletteSig then return end
-  paletteSig = sig
 
-  if source == "wallpaper" then
-    -- The old colors stay up until the new palette lands, rather than flashing the fallbacks.
-    resolveWallpaper(sig, dark, connector)
-  elseif source == "custom" and name ~= "" then
+  if source == "custom" and name ~= "" then
     local path = findPaletteFile(configPaletteDirs(), name)
     palette = path and readPaletteFile(path, dark) or nil
   elseif source == "community" and name ~= "" then
@@ -184,11 +175,11 @@ local function refreshPalette(connector)
   else
     palette = nil
   end
-end
 
--- True when the theme moved since the palette was last resolved; cheap enough to poll every second.
-function M.paletteStale(connector)
-  return (signature(connector)) ~= paletteSig
+  paletteSig = sig
+  if source == "wallpaper" and palette == nil then
+    resolveWallpaper(sig, dark, connector)
+  end
 end
 
 -- Called when an async palette resolve lands, so the caller can redraw.
