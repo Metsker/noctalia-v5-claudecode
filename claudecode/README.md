@@ -113,10 +113,10 @@ with the widget.
 
 The ring draws the 5-hour window in the palette's `primary` color and the 7-day window in
 `secondary`, whichever metric is chosen, and each still turns amber or red with its own
-pace. A ring's track is its own color at 30%, the way the shell's bar gauges draw theirs,
-so it stays visible on any bar background. Under `pill_metric = both` the 7-day window is an inner ring inside the 5-hour one.
-Both strokes shrink to two thirds of `ring_thickness` to fit, so the inner ring reads
-better with `ring_size` at 20 or more.
+pace. A ring's track is the palette's `on_surface` at 20%, a neutral gray that shows on any
+bar background without competing with the arc. Under `pill_metric = both` the 7-day window
+is an inner ring inside the 5-hour one. Both strokes shrink to two thirds of
+`ring_thickness` to fit, so the inner ring reads better with `ring_size` at 20 or more.
 
 The ring is an image, so unlike the text it is not restyled by the shell when the theme
 changes: plugins get no palette-change event. On a shell with `noctalia.getColor` it picks

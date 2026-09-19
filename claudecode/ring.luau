@@ -34,10 +34,11 @@ local ROLE_KEYS = {
 }
 
 -- Last-resort hexes when no palette resolves and no setting is configured.
--- Amber / red for the pace cues: those read the same in every theme.
+-- Amber / red for the pace cues, and a light gray for the track: those read the same in every theme.
 local HARD_FALLBACK = {
   tertiary = "#D8A657",
   error = "#E06C75",
+  on_surface = "#E0E0E0",
 }
 local FALLBACK_FILL = "#89B4FA"
 
@@ -214,11 +215,11 @@ local function num(v)
 end
 
 -- One ring: full-circle track plus an arc sweeping clockwise from 12 o'clock.
-local function ringMarkup(cx, cy, r, lw, frac, fill)
+local function ringMarkup(cx, cy, r, lw, frac, track, fill)
   if r < lw then return "" end -- too small to read as a ring; skip it
   local parts = {
-    -- The track is the arc's own color at 30%, the way the shell's bar gauges draw theirs.
-    `<circle cx="{num(cx)}" cy="{num(cy)}" r="{num(r)}" fill="none" stroke="{fill}" stroke-opacity="0.3" stroke-width="{num(lw)}"/>`,
+    -- A neutral track: on_surface at 20% shows on any bar background without competing with the arc.
+    `<circle cx="{num(cx)}" cy="{num(cy)}" r="{num(r)}" fill="none" stroke="{track}" stroke-opacity="0.2" stroke-width="{num(lw)}"/>`,
   }
   if frac >= 0.999 then
     table.insert(parts, `<circle cx="{num(cx)}" cy="{num(cy)}" r="{num(r)}" fill="none" stroke="{fill}" stroke-width="{num(lw)}"/>`)
@@ -233,7 +234,7 @@ local function ringMarkup(cx, cy, r, lw, frac, fill)
 end
 
 -- Rings nest inward from the edge; with more than one, each gets a thinner stroke and a gap so all fit.
-local function buildSvg(size, lw, rings)
+local function buildSvg(size, lw, rings, track)
   local cx = size / 2
   local lane, gap = lw, 0
   if #rings > 1 then
@@ -243,7 +244,7 @@ local function buildSvg(size, lw, rings)
   local parts = { `<svg xmlns="http://www.w3.org/2000/svg" width="{size}" height="{size}" viewBox="0 0 {size} {size}">` }
   for i, ring in rings do
     local r = (size - lane) / 2 - (i - 1) * (lane + gap)
-    table.insert(parts, ringMarkup(cx, cx, r, lane, ring.frac, ring.fill))
+    table.insert(parts, ringMarkup(cx, cx, r, lane, ring.frac, track, ring.fill))
   end
   table.insert(parts, "</svg>")
   return table.concat(parts, "")
@@ -265,6 +266,7 @@ function M.path(rings, opts)
 
   refreshPalette(opts.connector)
 
+  local track = M.color("on_surface")
   local resolved, keyParts = {}, {}
   for _, spec in rings do
     local frac = tonumber(spec.frac) or 0
@@ -278,12 +280,12 @@ function M.path(rings, opts)
   if dir == nil then return nil end
   local path = `{dir}/pill-ring.svg`
 
-  local key = `{paletteSig or "-"}|{size}|{num(lw)}|{table.concat(keyParts, ",")}`
+  local key = `{paletteSig or "-"}|{size}|{num(lw)}|{table.concat(keyParts, ",")}|{track}`
   if key == lastKey and lastPath == path and noctalia.fileExists(path) then
     return path
   end
 
-  local ok = noctalia.writeFile(path, buildSvg(size, lw, resolved))
+  local ok = noctalia.writeFile(path, buildSvg(size, lw, resolved, track))
   if not ok then return nil end
   lastKey, lastPath = key, path
   return path
