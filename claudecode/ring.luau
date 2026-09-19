@@ -205,46 +205,39 @@ local function num(v)
   return string.format("%.3f", v)
 end
 
--- One arc sweeping clockwise from 12 o'clock.
-local function arcMarkup(cx, cy, r, lw, arc)
-  local stroke = `stroke="{arc.fill}" stroke-width="{num(lw)}"`
-  if arc.opacity < 1 then stroke = `{stroke} stroke-opacity="{num(arc.opacity)}"` end
-  if arc.frac >= 0.999 then
-    return `<circle cx="{num(cx)}" cy="{num(cy)}" r="{num(r)}" fill="none" {stroke}/>`
-  elseif arc.frac > 0.001 then
-    local angle = -math.pi / 2 + arc.frac * 2 * math.pi
-    local ex, ey = cx + r * math.cos(angle), cy + r * math.sin(angle)
-    local large = arc.frac > 0.5 and 1 or 0
-    local d = `M {num(cx)} {num(cy - r)} A {num(r)} {num(r)} 0 {large} 1 {num(ex)} {num(ey)}`
-    return `<path d="{d}" fill="none" {stroke} stroke-linecap="round"/>`
-  end
-  return ""
-end
-
--- One ring: full-circle track plus its arcs, longest first so every arc's end stays visible.
-local function ringMarkup(cx, cy, r, lw, arcs, track)
+-- One ring: full-circle track plus an arc sweeping clockwise from 12 o'clock.
+local function ringMarkup(cx, cy, r, lw, frac, track, fill)
   if r < lw then return "" end -- too small to read as a ring; skip it
-  local order = table.clone(arcs)
-  table.sort(order, function(a, b)
-    if a.frac ~= b.frac then return a.frac > b.frac end
-    return a.index > b.index
-  end)
   local parts = {
     `<circle cx="{num(cx)}" cy="{num(cy)}" r="{num(r)}" fill="none" stroke="{track}" stroke-width="{num(lw)}"/>`,
   }
-  for _, arc in order do
-    table.insert(parts, arcMarkup(cx, cy, r, lw, arc))
+  if frac >= 0.999 then
+    table.insert(parts, `<circle cx="{num(cx)}" cy="{num(cy)}" r="{num(r)}" fill="none" stroke="{fill}" stroke-width="{num(lw)}"/>`)
+  elseif frac > 0.001 then
+    local angle = -math.pi / 2 + frac * 2 * math.pi
+    local ex, ey = cx + r * math.cos(angle), cy + r * math.sin(angle)
+    local large = frac > 0.5 and 1 or 0
+    local d = `M {num(cx)} {num(cy - r)} A {num(r)} {num(r)} 0 {large} 1 {num(ex)} {num(ey)}`
+    table.insert(parts, `<path d="{d}" fill="none" stroke="{fill}" stroke-width="{num(lw)}" stroke-linecap="round"/>`)
   end
   return table.concat(parts, "")
 end
 
-local function buildSvg(size, lw, arcs, track)
+-- Rings nest inward from the edge; with more than one, each gets a thinner stroke and a gap so all fit.
+local function buildSvg(size, lw, rings, track)
   local cx = size / 2
-  return table.concat({
-    `<svg xmlns="http://www.w3.org/2000/svg" width="{size}" height="{size}" viewBox="0 0 {size} {size}">`,
-    ringMarkup(cx, cx, (size - lw) / 2, lw, arcs, track),
-    "</svg>",
-  }, "")
+  local lane, gap = lw, 0
+  if #rings > 1 then
+    lane = math.max(1, lw * 2 / 3)
+    gap = math.max(1, lane / 2)
+  end
+  local parts = { `<svg xmlns="http://www.w3.org/2000/svg" width="{size}" height="{size}" viewBox="0 0 {size} {size}">` }
+  for i, ring in rings do
+    local r = (size - lane) / 2 - (i - 1) * (lane + gap)
+    table.insert(parts, ringMarkup(cx, cx, r, lane, ring.frac, track, ring.fill))
+  end
+  table.insert(parts, "</svg>")
+  return table.concat(parts, "")
 end
 
 -- ── public entry point ──────────────────────────────────────────────────────
@@ -252,8 +245,8 @@ end
 local lastKey = nil
 local lastPath = nil
 
--- `arcs` is a list of { frac = 0..1, role = palette role }, first on top; returns the SVG path, or nil when it cannot be written.
-function M.path(arcs, opts)
+-- `rings` is a list of { frac = 0..1, role = palette role }, outermost first; returns the SVG path, or nil when it cannot be written.
+function M.path(rings, opts)
   opts = opts or {}
   local size = math.floor(tonumber(opts.size) or 16)
   if size < 8 then size = 8 end
@@ -265,17 +258,12 @@ function M.path(arcs, opts)
 
   local track = M.color("surface_variant", opts.trackColor, true)
   local resolved, keyParts = {}, {}
-  for i, spec in arcs do
+  for _, spec in rings do
     local frac = tonumber(spec.frac) or 0
     if frac < 0 then frac = 0 elseif frac > 1 then frac = 1 end
     local fill = M.color(spec.role, opts.fillColor, false)
-    -- An arc that resolves to an earlier arc's color is dimmed so the two stay apart.
-    local opacity = 1
-    for _, prev in resolved do
-      if prev.fill == fill then opacity = 0.5 end
-    end
-    table.insert(resolved, { index = i, frac = frac, fill = fill, opacity = opacity })
-    table.insert(keyParts, `{num(frac)}/{fill}/{num(opacity)}`)
+    table.insert(resolved, { frac = frac, fill = fill })
+    table.insert(keyParts, `{num(frac)}/{fill}`)
   end
 
   local dir = noctalia.pluginDataDir()

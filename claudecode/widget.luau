@@ -72,28 +72,28 @@ local function render()
   local pFive = pace(five, usage.five_hour_reset, shared.FIVE_HOUR_SECS)
   local pSeven = pace(seven, usage.seven_day_reset, shared.SEVEN_DAY_SECS)
 
-  -- Each window keeps its own color (5-hour primary, 7-day secondary); "both" stacks the week under the 5-hour arc.
-  local text, shown, arcs, tracked
+  -- Each window keeps its own color (5-hour primary, 7-day secondary); "both" nests the week inside the 5-hour ring.
+  local text, shown, rings, tracked
   if cfg.metric == "both" then
     text = `{round(five)}% · {round(seven)}%`
     shown = { pFive, pSeven }
-    arcs = {
+    rings = {
       { frac = five / 100, role = paceColor(pFive.status, "primary") },
       { frac = seven / 100, role = paceColor(pSeven.status, "secondary") },
     }
     tracked = { p = pFive, reset = usage.five_hour_reset }
   elseif cfg.metric == "seven_day" then
     text, shown = `{round(seven)}%`, { pSeven }
-    arcs = { { frac = seven / 100, role = paceColor(pSeven.status, "secondary") } }
+    rings = { { frac = seven / 100, role = paceColor(pSeven.status, "secondary") } }
     tracked = { p = pSeven, reset = usage.seven_day_reset }
   else
     text, shown = `{round(five)}%`, { pFive }
-    arcs = { { frac = five / 100, role = paceColor(pFive.status, "primary") } }
+    rings = { { frac = five / 100, role = paceColor(pFive.status, "primary") } }
     tracked = { p = pFive, reset = usage.five_hour_reset }
   end
 
   -- pill_extras rides beside the percentage, describing the window the ring
-  -- tracks — the 5-hour one under "both", the same one the top arc follows, so the
+  -- tracks — the 5-hour one under "both", the same one the outer ring follows, so the
   -- countdown never belongs to a different window than the ring does.
   local extras = {}
   if cfg.extras == "countdown" or cfg.extras == "both" then
@@ -127,7 +127,7 @@ local function render()
   local ringPath = nil
   if cfg.style == "ring" or cfg.style == "ring_text" then
     lastOutput = barWidget.outputName() or lastOutput
-    ringPath = ring.path(arcs, {
+    ringPath = ring.path(rings, {
       size = cfg.size,
       thickness = cfg.thickness,
       fillColor = cfg.fillColor,
