@@ -57,7 +57,7 @@ tokens with their cost.
 (`17% · 3h 20m`), the pace against the clock (`↓16` is sixteen points under where the
 window says you should be, `↑16` is sixteen over), both, or neither. It describes
 whichever window the bar metric tracks — the 5-hour one under `both`, the same window
-the ring follows, so the two never disagree. With pace showing, the bare `↑` off-track
+as the ring's top arc, so the two never disagree. With pace showing, the bare `↑` off-track
 cue steps aside; the number already says it.
 
 Both are `[widget.actions]` defaults, so they are re-bindable in the bar's gesture
@@ -112,8 +112,12 @@ with the widget.
 | `ring_track_color` | `color` | `#585B70` | Ring background color, same fallback. |
 | `accent` | `color` | `primary` | Desktop widget accent. |
 
-Under `pill_metric = both` the ring tracks the 5-hour window only — the text still
-carries both numbers. Two concentric rings do not read at bar size.
+Under `pill_metric = both` the ring carries both windows on one track: the 5-hour arc on
+top, and the 7-day arc beneath it in the palette's `outline` color. The longer arc is
+drawn first, so both ends stay visible whichever window is ahead. Each arc still turns
+amber or red with its own pace, and when the two land on the same color the 7-day one is
+drawn at half opacity. Two concentric rings do not read at bar size, which is why they
+share one.
 
 ### Rate windows
 

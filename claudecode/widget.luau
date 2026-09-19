@@ -72,26 +72,28 @@ local function render()
   local pFive = pace(five, usage.five_hour_reset, shared.FIVE_HOUR_SECS)
   local pSeven = pace(seven, usage.seven_day_reset, shared.SEVEN_DAY_SECS)
 
-  -- The ring shows one window; with metric "both" that is the 5-hour one (the
-  -- one that moves minute to minute) and the text carries both numbers.
-  local text, shown, arc, tracked
+  -- With metric "both" the ring carries the week as a dimmer arc under the 5-hour one.
+  local text, shown, arcs, tracked
   if cfg.metric == "both" then
     text = `{round(five)}% · {round(seven)}%`
     shown = { pFive, pSeven }
-    arc = { pct = five, p = pFive }
+    arcs = {
+      { frac = five / 100, role = paceColor(pFive.status, "on_surface") },
+      { frac = seven / 100, role = paceColor(pSeven.status, "outline") },
+    }
     tracked = { p = pFive, reset = usage.five_hour_reset }
   elseif cfg.metric == "seven_day" then
     text, shown = `{round(seven)}%`, { pSeven }
-    arc = { pct = seven, p = pSeven }
+    arcs = { { frac = seven / 100, role = paceColor(pSeven.status, "on_surface") } }
     tracked = { p = pSeven, reset = usage.seven_day_reset }
   else
     text, shown = `{round(five)}%`, { pFive }
-    arc = { pct = five, p = pFive }
+    arcs = { { frac = five / 100, role = paceColor(pFive.status, "on_surface") } }
     tracked = { p = pFive, reset = usage.five_hour_reset }
   end
 
   -- pill_extras rides beside the percentage, describing the window the ring
-  -- tracks — the 5-hour one under "both", the same one the arc follows, so the
+  -- tracks — the 5-hour one under "both", the same one the top arc follows, so the
   -- countdown never belongs to a different window than the ring does.
   local extras = {}
   if cfg.extras == "countdown" or cfg.extras == "both" then
@@ -125,10 +127,7 @@ local function render()
   local ringPath = nil
   if cfg.style == "ring" or cfg.style == "ring_text" then
     lastOutput = barWidget.outputName() or lastOutput
-    ringPath = ring.path({
-      frac = arc.pct / 100,
-      role = paceColor(arc.p.status, "on_surface"),
-    }, {
+    ringPath = ring.path(arcs, {
       size = cfg.size,
       thickness = cfg.thickness,
       fillColor = cfg.fillColor,
