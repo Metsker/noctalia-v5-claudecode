@@ -643,6 +643,31 @@ for i in $(seq 0 6); do
 done
 
 # ============================================================
+echo "=== Test 24: Content-block lines of one response counted once ==="
+# ============================================================
+ENV24=$(setup_env "test24")
+
+# Usage: make_block_line <message id> <request id> <output tokens> [<type separator>]
+make_block_line() {
+    printf '{"type":%s"assistant","timestamp":"%sT12:00:00Z","sessionId":"sess-blk","requestId":"%s","message":{"id":"%s","model":"claude-sonnet-4-20250514","usage":{"input_tokens":10,"output_tokens":%d,"cache_read_input_tokens":100,"cache_creation_input_tokens":0}}}\n' \
+        "${4:-}" "$TODAY" "$2" "$1" "$3"
+}
+
+{
+    # Streaming: thinking, text and tool_use blocks; output_tokens is final only on the last.
+    make_block_line msg_a req_a 2
+    make_block_line msg_a req_a 2
+    make_block_line msg_a req_a 50
+    make_block_line msg_b req_b 5 " "
+} > "$ENV24/.claude/projects/test-project/test.jsonl"
+
+OUTPUT24=$(run_script "$ENV24")
+WEEK_TOKENS24=$(echo "$OUTPUT24" | grep "^WEEK_TOKENS=" | cut -d= -f2)
+assert_eq "$WEEK_TOKENS24" "275" "Repeated usage counted once, final output_tokens kept"
+WEEK_MESSAGES24=$(echo "$OUTPUT24" | grep "^WEEK_MESSAGES=" | cut -d= -f2)
+assert_eq "$WEEK_MESSAGES24" "2" "One message per response, spaced \"type\" still matched"
+
+# ============================================================
 echo ""
 echo "Results: $PASS passed, $FAIL failed"
 [ "$FAIL" -eq 0 ] || exit 1

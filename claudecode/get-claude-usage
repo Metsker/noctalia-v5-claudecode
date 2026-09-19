@@ -145,7 +145,7 @@ count_profile_tokens() {
     # grep drops non-assistant lines before jq parses them, which is most of the runtime.
     find "$proj_dir" -name "*.jsonl" -mtime -31 -exec cat {} + 2>/dev/null \
         | grep -E '"type": *"assistant"' \
-        | jq -r -R 'fromjson? | select(.type == "assistant") | "\(.timestamp[:10]) \(.message.model // "unknown") \(.message.usage.input_tokens // 0) \(.message.usage.output_tokens // 0) \(.message.usage.cache_read_input_tokens // 0) \(.message.usage.cache_creation_input_tokens // 0) \(.sessionId // "unknown")"' \
+        | jq -r -R 'fromjson? | select(.type == "assistant") | "\(.timestamp[:10]) \(.message.model // "unknown") \(.message.usage.input_tokens // 0) \(.message.usage.output_tokens // 0) \(.message.usage.cache_read_input_tokens // 0) \(.message.usage.cache_creation_input_tokens // 0) \(.sessionId // "unknown") \(if .message.id then "\(.message.id):\(.requestId // "")" else "-" end)"' \
         | awk -v week_start="$WEEK_START" -v month_start="$MONTH_START" -v today="$TODAY" -v day_dates="$day_dates" -v pricing="$PRICING_AWK" '
         BEGIN {
             split(day_dates, dates, ",")
@@ -163,31 +163,42 @@ count_profile_tokens() {
             }
         }
         {
-            date = $1; model = $2
-            inp = $3 + 0; out = $4 + 0; cr = $5 + 0; cw = $6 + 0
-            sess = $7
-            total = inp + out + cr + cw
-
-            n_parts = split(model, mparts, "-")
-            family = (n_parts >= 3 && mparts[1] == "claude") ? mparts[2] : model
-
-            day[date] += total
-            if (date >= week_start) {
-                week_model[family] += total
-                week_tokens += total
-                week_msgs++
-                week_sess[sess] = 1
-            }
-            if (date >= month_start) month_tokens += total
-
-            if (has_pricing && (family in price_in)) {
-                cost = inp * price_in[family] + out * price_out[family] + cr * price_cr[family] + cw * price_cw[family]
-                day_cost[date] += cost
-                if (date >= week_start) week_cost += cost
-                if (date >= month_start) month_cost += cost
-            }
+            # One line per content block repeats the usage (output_tokens partial until the last), so keep the largest per response.
+            key = ($8 != "" && $8 != "-") ? $8 : "line:" NR
+            total = $3 + $4 + $5 + $6
+            if ((key in r_total) && r_total[key] >= total) next
+            r_total[key] = total
+            r_date[key] = $1; r_model[key] = $2
+            r_inp[key] = $3 + 0; r_out[key] = $4 + 0; r_cr[key] = $5 + 0; r_cw[key] = $6 + 0
+            r_sess[key] = $7
         }
         END {
+            for (key in r_total) {
+                date = r_date[key]; model = r_model[key]
+                inp = r_inp[key]; out = r_out[key]; cr = r_cr[key]; cw = r_cw[key]
+                sess = r_sess[key]
+                total = r_total[key]
+
+                n_parts = split(model, mparts, "-")
+                family = (n_parts >= 3 && mparts[1] == "claude") ? mparts[2] : model
+
+                day[date] += total
+                if (date >= week_start) {
+                    week_model[family] += total
+                    week_tokens += total
+                    week_msgs++
+                    week_sess[sess] = 1
+                }
+                if (date >= month_start) month_tokens += total
+
+                if (has_pricing && (family in price_in)) {
+                    cost = inp * price_in[family] + out * price_out[family] + cr * price_cr[family] + cw * price_cw[family]
+                    day_cost[date] += cost
+                    if (date >= week_start) week_cost += cost
+                    if (date >= month_start) month_cost += cost
+                }
+            }
+
             printf "WEEK_TOKENS=%d\n", week_tokens + 0
             printf "WEEK_MESSAGES=%d\n", week_msgs + 0
             n = 0; for (s in week_sess) n++
