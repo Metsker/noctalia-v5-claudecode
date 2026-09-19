@@ -12,6 +12,8 @@
 --   noctalia msg plugin jrohland/claudecode:service all refresh
 
 local scriptPath = `{noctalia.pluginDir()}/get-claude-usage`
+-- The host default is 5s; a month of transcripts can take longer than that to scan.
+local FETCH_TIMEOUT_MS = 60000
 local depsOk = noctalia.commandExists("jq") and noctalia.commandExists("curl")
 local fetching = false
 local started = false
@@ -44,6 +46,12 @@ local function fetch()
   local launched = noctalia.runAsync(`bash '{scriptPath}' --json`, function(result)
     fetching = false
 
+    if type(result) == "table" and result.timedOut then
+      noctalia.log(`claudecode: get-claude-usage timed out after {FETCH_TIMEOUT_MS} ms`)
+      publishStatus("error", "Fetch timed out")
+      return
+    end
+
     if type(result) ~= "table" or result.success == false or result.exitCode ~= 0 then
       noctalia.log("claudecode: get-claude-usage failed")
       publishStatus("error", "Fetch failed")
@@ -59,7 +67,7 @@ local function fetch()
 
     noctalia.state.set("usage", data)
     publishStatus("ready")
-  end)
+  end, FETCH_TIMEOUT_MS)
 
   if not launched then
     fetching = false
