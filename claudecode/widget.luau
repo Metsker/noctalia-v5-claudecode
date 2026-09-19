@@ -24,6 +24,8 @@ local PANEL_ID = "jrohland/claudecode:popout"
 
 local usage = noctalia.state.get("usage")
 local status = noctalia.state.get("status")
+-- outputName() is nil when render() runs from a state or palette callback, so keep the last answer.
+local lastOutput = nil
 
 -- Settings are re-read every render so a change in the widget's settings panel
 -- lands on the next tick without a reload.
@@ -122,6 +124,7 @@ local function render()
   -- glyph pill rather than blanking the widget out.
   local ringPath = nil
   if cfg.style == "ring" or cfg.style == "ring_text" then
+    lastOutput = barWidget.outputName() or lastOutput
     ringPath = ring.path({
       frac = arc.pct / 100,
       role = paceColor(arc.p.status, "on_surface"),
@@ -130,7 +133,7 @@ local function render()
       thickness = cfg.thickness,
       fillColor = cfg.fillColor,
       trackColor = cfg.trackColor,
-      connector = barWidget.outputName(),
+      connector = lastOutput,
     })
   end
 
