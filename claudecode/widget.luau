@@ -72,23 +72,23 @@ local function render()
   local pFive = pace(five, usage.five_hour_reset, shared.FIVE_HOUR_SECS)
   local pSeven = pace(seven, usage.seven_day_reset, shared.SEVEN_DAY_SECS)
 
-  -- With metric "both" the ring carries the week as a dimmer arc under the 5-hour one.
+  -- Each window keeps its own color (5-hour primary, 7-day secondary); "both" stacks the week under the 5-hour arc.
   local text, shown, arcs, tracked
   if cfg.metric == "both" then
     text = `{round(five)}% · {round(seven)}%`
     shown = { pFive, pSeven }
     arcs = {
-      { frac = five / 100, role = paceColor(pFive.status, "on_surface") },
-      { frac = seven / 100, role = paceColor(pSeven.status, "outline") },
+      { frac = five / 100, role = paceColor(pFive.status, "primary") },
+      { frac = seven / 100, role = paceColor(pSeven.status, "secondary") },
     }
     tracked = { p = pFive, reset = usage.five_hour_reset }
   elseif cfg.metric == "seven_day" then
     text, shown = `{round(seven)}%`, { pSeven }
-    arcs = { { frac = seven / 100, role = paceColor(pSeven.status, "on_surface") } }
+    arcs = { { frac = seven / 100, role = paceColor(pSeven.status, "secondary") } }
     tracked = { p = pSeven, reset = usage.seven_day_reset }
   else
     text, shown = `{round(five)}%`, { pFive }
-    arcs = { { frac = five / 100, role = paceColor(pFive.status, "on_surface") } }
+    arcs = { { frac = five / 100, role = paceColor(pFive.status, "primary") } }
     tracked = { p = pFive, reset = usage.five_hour_reset }
   end
 

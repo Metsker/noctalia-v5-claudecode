@@ -58,7 +58,7 @@
     },
     "pill_style": {
       "label": "Bar style",
-      "description": "How the bar pill draws the utilization. Under “Both” the ring draws the 7-day window as a dimmer arc beneath the 5-hour one.",
+      "description": "How the bar pill draws the utilization. Under “Both” the ring draws the 7-day window as a second arc beneath the 5-hour one.",
       "options": {
         "glyph_text": "Glyph + percentage",
         "ring": "Ring only",

@@ -112,9 +112,10 @@ with the widget.
 | `ring_track_color` | `color` | `#585B70` | Ring background color, same fallback. |
 | `accent` | `color` | `primary` | Desktop widget accent. |
 
-Under `pill_metric = both` the ring carries both windows on one track: the 5-hour arc on
-top, and the 7-day arc beneath it in the palette's `outline` color. The longer arc is
-drawn first, so both ends stay visible whichever window is ahead. Each arc still turns
+The ring draws the 5-hour window in the palette's `primary` color and the 7-day window in
+`secondary`, whichever metric is chosen. Under `pill_metric = both` it carries both on one
+track, the 5-hour arc on top. The longer arc is drawn first, so both ends stay visible
+whichever window is ahead. Each arc still turns
 amber or red with its own pace, and when the two land on the same color the 7-day one is
 drawn at half opacity. Two concentric rings do not read at bar size, which is why they
 share one.
