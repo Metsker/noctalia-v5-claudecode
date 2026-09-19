@@ -108,7 +108,7 @@ with the widget.
 | `show_glyph` | `bool` | `true` | Show the Claude glyph next to the percentage. |
 | `ring_size` | `int` | `16` | Ring diameter in pixels (10–28). Keep it under the bar height or it clips. |
 | `ring_thickness` | `int` | `3` | Ring stroke width in pixels (1–6). |
-| `ring_color` | `color` | `#89B4FA` | Ring progress color, used only when the active palette cannot be read. |
+| `ring_color` | `color` | `#89B4FA` | Ring progress color, used only when the active palette cannot be read (older shells). |
 | `ring_track_color` | `color` | `#585B70` | Ring background color, same fallback. |
 | `accent` | `color` | `primary` | Desktop widget accent. |
 
@@ -117,6 +117,18 @@ The ring draws the 5-hour window in the palette's `primary` color and the 7-day 
 pace. Under `pill_metric = both` the 7-day window is an inner ring inside the 5-hour one.
 Both strokes shrink to two thirds of `ring_thickness` to fit, so the inner ring reads
 better with `ring_size` at 20 or more.
+
+The ring is an image, so unlike the text it is not restyled by the shell when the theme
+changes: on a shell with `noctalia.getColor` it picks up the new colors on its next redraw,
+within five seconds. Plugins get no palette-change event, but Noctalia's `colors_changed`
+hook can deliver one. Add it to any `*.toml` under `~/.config/noctalia/` to redraw the ring
+the moment the palette changes (on an older shell, this is also what picks up a new
+wallpaper's colors):
+
+```toml
+[hooks]
+colors_changed = "noctalia msg plugin jrohland/claudecode:pill all colors"
+```
 
 ### Rate windows
 
@@ -133,11 +145,11 @@ arithmetic, so a card never reads calm while the vendor is calling it urgent.
 
 - Noctalia's `ui.*` has no arc primitive, so `ring.luau` generates an SVG and hands it to
   `barWidget.setImage`; the image loader rasterizes it through librsvg.
-- An SVG needs literal hex and the plugin API has no palette-role resolver, so
-  `ring.luau` resolves the active palette itself: custom and community palettes are read
-  from disk, wallpaper palettes are re-derived by running `noctalia theme`. Built-in
-  palettes live inside the shell binary and cannot be read, so those fall back to
-  `ring_color` / `ring_track_color`.
+- An SVG needs literal hex, so `ring.luau` asks the shell for each role with
+  `noctalia.getColor` (plugin API 31). On an older shell it resolves the active palette
+  itself: custom and community palettes are read from disk, wallpaper palettes are
+  re-derived by running `noctalia theme`, and built-in palettes, which live inside the
+  shell binary, fall back to `ring_color` / `ring_track_color`.
 - Inside the panel and the desktop widget, progress is still linear (`ui.progress`).
 - The panel is a fixed 380×640 and scrolls; the DMS popout auto-sizes.
 

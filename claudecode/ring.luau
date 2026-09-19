@@ -6,8 +6,9 @@
 -- images through an librsvg-backed loader. So a ring is an SVG we generate here,
 -- write to the plugin data dir and hand back as a path.
 --
--- SVG needs literal hex, and the plugin API has no palette-role resolver, so the
--- palette is resolved by reading the same files the shell reads:
+-- SVG needs literal hex. A host with noctalia.getColor (plugin API 31) resolves
+-- roles itself; on older hosts the palette is resolved by reading the same files
+-- the shell reads:
 --
 --   theme.source = "custom"    ~/.config/noctalia/palettes/<name>.json
 --   theme.source = "community" <state>/community-palettes/<name>.json
@@ -145,6 +146,7 @@ end
 
 -- Re-resolve when the effective theme changed. Cheap and idempotent.
 local function refreshPalette(connector)
+  if noctalia.getColor then return end -- the host answers every role live
   local source = noctalia.getSetting("theme.source")
   if type(source) ~= "string" then source = "" end
   local dark = noctalia.isDarkMode()
@@ -182,18 +184,30 @@ local function refreshPalette(connector)
   end
 end
 
+-- Forget the resolved palette, so the next draw resolves it again; for a colors_changed notification.
+function M.invalidate()
+  paletteSig = nil
+end
+
 -- Called when an async palette resolve lands, so the caller can redraw.
 function M.setOnPaletteChanged(callback)
   onPalette = callback
 end
 
+local function lookup(role)
+  if noctalia.getColor then return noctalia.getColor(role) end
+  return palette and palette[role]
+end
+
 -- Palette role -> hex. `fallback` is the configured color for this slot; a role
 -- name there is resolved too, so "outline" in a color setting keeps working.
 function M.color(role, fallback, isTrack)
-  if palette and palette[role] then return palette[role] end
+  local hex = lookup(role)
+  if hex then return hex end
   if type(fallback) == "string" and fallback ~= "" then
     if fallback:sub(1, 1) == "#" then return fallback end
-    if palette and palette[fallback] then return palette[fallback] end
+    hex = lookup(fallback)
+    if hex then return hex end
   end
   if HARD_FALLBACK[role] then return HARD_FALLBACK[role] end
   return isTrack and FALLBACK_TRACK or FALLBACK_FILL

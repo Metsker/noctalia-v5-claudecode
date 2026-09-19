@@ -84,7 +84,7 @@
     },
     "ring_color": {
       "label": "Ring fallback color",
-      "description": "Used only when the palette cannot be read, as with built-in themes."
+      "description": "Used only when the palette cannot be read, as with built-in themes on Noctalia versions without getColor."
     },
     "ring_track_color": {
       "label": "Ring track fallback color"
