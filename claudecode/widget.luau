@@ -215,11 +215,3 @@ end
 function onRightClick()
   shared.requestRefresh()
 end
-
--- `noctalia msg plugin jrohland/claudecode:pill all colors`, run from a [hooks] colors_changed entry, redraws the ring on a theme change.
-function onIpc(event)
-  if event == "colors" then
-    ring.invalidate()
-    render()
-  end
-end

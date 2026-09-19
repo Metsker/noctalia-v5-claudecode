@@ -184,11 +184,6 @@ local function refreshPalette(connector)
   end
 end
 
--- Forget the resolved palette, so the next draw resolves it again; for a colors_changed notification.
-function M.invalidate()
-  paletteSig = nil
-end
-
 -- Called when an async palette resolve lands, so the caller can redraw.
 function M.setOnPaletteChanged(callback)
   onPalette = callback

@@ -119,16 +119,8 @@ Both strokes shrink to two thirds of `ring_thickness` to fit, so the inner ring 
 better with `ring_size` at 20 or more.
 
 The ring is an image, so unlike the text it is not restyled by the shell when the theme
-changes: on a shell with `noctalia.getColor` it picks up the new colors on its next redraw,
-within five seconds. Plugins get no palette-change event, but Noctalia's `colors_changed`
-hook can deliver one. Add it to any `*.toml` under `~/.config/noctalia/` to redraw the ring
-the moment the palette changes (on an older shell, this is also what picks up a new
-wallpaper's colors):
-
-```toml
-[hooks]
-colors_changed = "noctalia msg plugin jrohland/claudecode:pill all colors"
-```
+changes: plugins get no palette-change event. On a shell with `noctalia.getColor` it picks
+up the new colors on its next redraw, within five seconds.
 
 ### Rate windows
 
